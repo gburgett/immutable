@@ -43,7 +43,8 @@ func Cons(item interface{}, list *List) *List {
 	}
 }
 
-// Creates a new list by prepending the given list of items onto the given list
+// Creates a new list by prepending the given list of items onto the given list.  This is equivalent to
+// items.Count() cons operations
 func Prepend(items *List, onto *List) *List {
 	if items.IsNil() {
 		return onto
