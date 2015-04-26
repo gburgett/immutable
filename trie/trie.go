@@ -49,7 +49,7 @@ var nilTrie *Trie = &Trie{
 
 // Returns a new Trie with the given key set to the given value.
 // Also returns the old value that was at that key.
-func Set(t *Trie, key []byte, value interface{}) (*Trie, interface{}) {
+func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	if value == nil {
 		panic("value cannot be nil")
 	}
@@ -106,7 +106,7 @@ func (t *Trie) Len() uint32 {
 
 // Deletes an item out of the trie.  Returns a new trie with the item removed, and the
 // value of the previous item.
-func Delete(t *Trie, key []byte) (*Trie, interface{}) {
+func (t *Trie) Delete(key []byte) (*Trie, interface{}) {
 	if len(key) == 0 {
 		//the root node is the leaf for this key
 		if t.root.isLeaf() {

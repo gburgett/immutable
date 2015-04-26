@@ -10,7 +10,7 @@ func benchmarkSet_Add(b *testing.B, numItems int, keyLen int) {
 
 	for i := 0; i < numItems; i++ {
 		key := makeRandomKey(b, keyLen)
-		tree, _ = Set(tree, key, i)
+		tree, _ = tree.Set(key, i)
 	}
 
 	keys := make([][]byte, 1000)
@@ -20,7 +20,7 @@ func benchmarkSet_Add(b *testing.B, numItems int, keyLen int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = Set(tree, keys[i%len(keys)], i)
+		_, _ = tree.Set(keys[i%len(keys)], i)
 	}
 }
 
@@ -91,7 +91,7 @@ func benchmarkGet(b *testing.B, numItems int, keyLen int) {
 	for i := 0; i < len(keys); i++ {
 		key := makeRandomKey(b, keyLen)
 		keys[i] = key
-		tree, _ = Set(tree, key, i)
+		tree, _ = tree.Set(key, i)
 	}
 
 	b.ResetTimer()
@@ -167,12 +167,12 @@ func benchmarkDelete(b *testing.B, numItems int, keyLen int) {
 	for i := 0; i < len(keys); i++ {
 		key := makeRandomKey(b, keyLen)
 		keys[i] = key
-		tree, _ = Set(tree, key, i)
+		tree, _ = tree.Set(key, i)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = Delete(tree, keys[i%len(keys)])
+		_, _ = tree.Delete(keys[i%len(keys)])
 	}
 }
 

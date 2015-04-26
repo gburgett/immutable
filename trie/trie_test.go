@@ -21,7 +21,7 @@ func Test_Set_EmptyKey_AddedAtRoot(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(makeTrieSimple([]byte{0x08, 0x08, 0x01}), key, value)
+	result, old := makeTrieSimple([]byte{0x08, 0x08, 0x01}).Set(key, value)
 
 	//assert
 	assert.NotNil(t, result.root, "root")
@@ -41,7 +41,7 @@ func Test_Set_EmptyKey_AddedAtRoot_Immutable(t *testing.T) {
 	tree := NilTrie()
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result)
@@ -60,7 +60,7 @@ func Test_Set_DeepKey_AddedAsLeaf(t *testing.T) {
 	tree := NilTrie()
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -85,7 +85,7 @@ func Test_Set_DeepKey_AddedAsLeaf_Immutable(t *testing.T) {
 	tree := NilTrie()
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result)
@@ -106,7 +106,7 @@ func Test_Set_SecondDeepKey_AddedAsLeaf(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -144,7 +144,7 @@ func Test_Set_SecondDeepKey_AddedAsLeaf_Immutable(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result)
@@ -176,7 +176,7 @@ func Test_Set_LongerKey_LeafOfLeaf(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -209,7 +209,7 @@ func Test_Set_LongerKey_LeafOfLeaf_Immutable(t *testing.T) {
 	}
 
 	//act
-	result, _ := Set(tree, key, value)
+	result, _ := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -239,7 +239,7 @@ func Test_Set_ShorterKey_LeafOfLeaf(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -272,7 +272,7 @@ func Test_Set_ShorterKey_LeafOfLeaf_Immutable(t *testing.T) {
 	}
 
 	//act
-	result, _ := Set(tree, key, value)
+	result, _ := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -302,7 +302,7 @@ func Test_Set_ShorterKey_LeafOfRoot(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -357,7 +357,7 @@ func Test_Set_MultinodeChild_RecurseInto(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -403,7 +403,7 @@ func Test_Set_RecurseInto_SplitNode(t *testing.T) {
 	key := []byte{0x10, 0x46, 0xdf, 0xf0}
 
 	//act
-	result, _ := Set(tree, key, &testItem{
+	result, _ := tree.Set(key, &testItem{
 		value: "new item",
 	})
 
@@ -422,7 +422,7 @@ func Test_Set_Existing_Replaced(t *testing.T) {
 	}
 
 	//act
-	result, old := Set(tree, key, value)
+	result, old := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -454,7 +454,7 @@ func Test_Set_Existing_Replaced_Immutable(t *testing.T) {
 	}
 
 	//act
-	result, _ := Set(tree, key, value)
+	result, _ := tree.Set(key, value)
 
 	//assert
 	assert.NotNil(t, result, "result")
@@ -502,7 +502,7 @@ func Test_Delete_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{0x94})
+	result, old := tree.Delete([]byte{0x94})
 
 	//assert
 	assert.Nil(t, old, "old")
@@ -515,7 +515,7 @@ func Test_DeleteDeep_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{0x93, 0x93})
+	result, old := tree.Delete([]byte{0x93, 0x93})
 
 	//assert
 	assert.Nil(t, old, "old")
@@ -527,7 +527,7 @@ func Test_Delete_Exist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{0x93, 0x94})
+	result, old := tree.Delete([]byte{0x93, 0x94})
 
 	//assert
 	assert.NotNil(t, old, "old")
@@ -541,7 +541,7 @@ func Test_DeleteRoot_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{})
+	result, old := tree.Delete([]byte{})
 
 	//assert
 	assert.Nil(t, old, "old")
@@ -552,7 +552,7 @@ func Test_DeleteRoot_Exist(t *testing.T) {
 	tree := makeTrieSimple([]byte{}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{})
+	result, old := tree.Delete([]byte{})
 
 	//assert
 	assert.NotNil(t, old, "old")
@@ -565,7 +565,7 @@ func Test_DeleteNode_NoChange(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{0x93})
+	result, old := tree.Delete([]byte{0x93})
 
 	//assert
 	assert.Nil(t, old, "old")
@@ -577,7 +577,7 @@ func Test_DeleteLeafWithChildren_ValueUnset(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, old := Delete(tree, []byte{0x93})
+	result, old := tree.Delete([]byte{0x93})
 
 	//assert
 	assert.NotNil(t, old, "old")
@@ -590,7 +590,7 @@ func Test_DeleteSingleChildLeaf_ChildMergedUp(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94})
 
 	//act
-	result, old := Delete(tree, []byte{0x93})
+	result, old := tree.Delete([]byte{0x93})
 
 	//assert
 	assert.NotNil(t, old, "old")
@@ -611,7 +611,7 @@ func Test_DeletePureLeaf_RemovedFromParent(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94})
 
 	//act
-	result, old := Delete(tree, []byte{0x93, 0x94})
+	result, old := tree.Delete([]byte{0x93, 0x94})
 
 	//assert
 	assert.NotNil(t, old, "old")
@@ -697,7 +697,7 @@ func makeTrieSimpleArr(keys [][]byte) *Trie {
 	for i := 0; i < len(keys); i++ {
 		key := keys[i]
 		val := fmt.Sprintf("[% x]", key)
-		ret, _ = Set(ret, key, &testItem{
+		ret, _ = ret.Set(key, &testItem{
 			value: val,
 		})
 	}
@@ -716,15 +716,15 @@ func makeGiantTrie(iterations int) *Trie {
 		for j = 0; j < 256; j++ {
 			for k = 0; k < 256; k++ {
 				bytes := []byte{byte(i), byte(j), byte(k)}
-				tree, _ = Set(tree, bytes, bytes)
+				tree, _ = tree.Set(bytes, bytes)
 			}
 			bytes := []byte{byte(i), byte(j)}
-			tree, _ = Set(tree, bytes, bytes)
+			tree, _ = tree.Set(bytes, bytes)
 		}
 		bytes := []byte{byte(i)}
-		tree, _ = Set(tree, bytes, bytes)
+		tree, _ = tree.Set(bytes, bytes)
 	}
-	tree, _ = Set(tree, []byte{}, []byte{})
+	tree, _ = tree.Set([]byte{}, []byte{})
 
 	return tree
 }

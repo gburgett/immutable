@@ -9,7 +9,7 @@ Getting an empty trie -
 	tree := trie.NilTrie()
 
 Adding an item to the trie -
-	tree, _ = trie.Set(tree, []byte{0x01}, 1)
+	tree, _ = tree.Set([]byte{0x01}, 1)
 
 Getting an item from the tree
 	got, ok := tree.Get([]byte{0x01})
@@ -17,11 +17,11 @@ Getting an item from the tree
 
 Updating an item in the tree
 	var prev interface{}
-	tree, prev = trie.Set(tree, []byte{0x01}, 2)
+	tree, prev = tree.Set([]byte{0x01}, 2)
 	//prev.(int) == 1 (the old value)
 
 Removing an item from the tree
-	tree, prev = trie.Delete(tree, []byte{0x01})
+	tree, prev = tree.Delete([]byte{0x01})
 	//prev.(int) == 2
 	got, ok = tree.Get([]byte{0x01})
 	//got == nil, ok == false
