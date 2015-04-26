@@ -1,6 +1,3 @@
-// Package flist implements an immutable cons-list with some functional methods.
-// The cons-list is a singly-linked list with immutable values.  A cons-list
-// can only be prepended to.  In order to append the entire list must be rebuilt.
 package flist
 
 // A singly-linked list of queue nodes which is immutable.  This provides built-in
