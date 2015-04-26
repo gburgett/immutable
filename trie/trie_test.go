@@ -231,9 +231,9 @@ func Test_Set_LongerKey_LeafOfLeaf_Immutable(t *testing.T) {
 }
 
 func Test_Set_ShorterKey_LeafOfLeaf(t *testing.T) {
-	tree := makeTrieSimple([]byte{128 + 64, 128, 128, 127})
+	tree := makeTrieSimple([]byte{128, 128, 128, 127})
 
-	key := []byte{128 + 64, 128, 128}
+	key := []byte{128, 128, 128}
 	value := &testItem{
 		value: "hi 127",
 	}
@@ -252,7 +252,7 @@ func Test_Set_ShorterKey_LeafOfLeaf(t *testing.T) {
 	assert.Nil(t, result.root.value, "root.value")
 
 	//new leaf, which is also a node
-	leaf := result.root.children[128+64]
+	leaf := result.root.children[128]
 	node := leaf
 	assert.NotNil(t, leaf, "original")
 	assert.Equal(t, "hi 127", leaf.value.(*testItem).value, "original.value")
@@ -260,7 +260,7 @@ func Test_Set_ShorterKey_LeafOfLeaf(t *testing.T) {
 	//original leaf
 	leaf = node.children[127]
 	assert.NotNil(t, leaf, "new")
-	assert.Equal(t, "[c0 80 80 7f]", leaf.value.(*testItem).value, "new.value")
+	assert.Equal(t, "[80 80 80 7f]", leaf.value.(*testItem).value, "new.value")
 }
 
 func Test_Set_ShorterKey_LeafOfLeaf_Immutable(t *testing.T) {
@@ -381,6 +381,38 @@ func Test_Set_MultinodeChild_RecurseInto(t *testing.T) {
 	assert.Equal(t, "hi 0x60", node.children[0x60].value.(*testItem).value, "new leaf.value")
 }
 
+func Test_Set_RecurseInto_SplitNode(t *testing.T) {
+	/*10: {
+	  key: [10 47],
+	  children: {
+	    9: {
+	        key: [10 47 09 1c],
+	        value: 0,
+	        children: {
+	        },
+	      },
+	    e0: {
+	        key: [10 47 e0 54],
+	        value: 0,
+	        children: {
+	        },
+	      },
+	  },
+	},*/
+	tree := makeTrieSimple([]byte{0x10, 0x47, 0x09, 0x1c}, []byte{0x10, 0x47, 0xe0, 0x54}, []byte{0x32, 0x00, 0x00, 0x00})
+	key := []byte{0x10, 0x46, 0xdf, 0xf0}
+
+	//act
+	result, _ := Set(tree, key, &testItem{
+		value: "new item",
+	})
+
+	//assert
+	got, ok := result.Get(key)
+	assert.True(t, ok, "exists")
+	assert.Equal(t, "new item", got.(*testItem).value, "value")
+}
+
 func Test_Set_Existing_Replaced(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x80, 0x80, 0x80, 0x92}, []byte{0x80, 0x80, 0x80, 0x91}, []byte{0x40, 0x80, 0x32})
 
@@ -470,10 +502,10 @@ func Test_Delete_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{0x94})
+	result, old := Delete(tree, []byte{0x94})
 
 	//assert
-	assert.False(t, ok, "ok")
+	assert.Nil(t, old, "old")
 	assert.Equal(t, 2, result.Len(), "len")
 	assert.Equal(t, tree.root, result.root, "no change, should return same root nodes")
 
@@ -483,10 +515,10 @@ func Test_DeleteDeep_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93, 0x93})
+	result, old := Delete(tree, []byte{0x93, 0x93})
 
 	//assert
-	assert.False(t, ok, "ok")
+	assert.Nil(t, old, "old")
 	assert.Equal(t, 2, result.Len(), "len")
 	assert.Equal(t, tree.root, result.root, "no change, should return same root nodes")
 }
@@ -495,12 +527,13 @@ func Test_Delete_Exist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93, 0x94})
+	result, old := Delete(tree, []byte{0x93, 0x94})
 
 	//assert
-	assert.True(t, ok, "ok")
+	assert.NotNil(t, old, "old")
+	assert.Equal(t, "[93 94]", old.(*testItem).value, "old.value")
 	assert.Equal(t, 1, result.Len(), "len")
-	_, ok = result.Get([]byte{0x93, 0x94})
+	_, ok := result.Get([]byte{0x93, 0x94})
 	assert.False(t, ok, "should not contain deleted item")
 }
 
@@ -508,10 +541,10 @@ func Test_DeleteRoot_NotExist(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{})
+	result, old := Delete(tree, []byte{})
 
 	//assert
-	assert.False(t, ok, "ok")
+	assert.Nil(t, old, "old")
 	assert.Equal(t, 2, result.Len(), "len")
 }
 
@@ -519,12 +552,12 @@ func Test_DeleteRoot_Exist(t *testing.T) {
 	tree := makeTrieSimple([]byte{}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{})
+	result, old := Delete(tree, []byte{})
 
 	//assert
-	assert.True(t, ok, "ok")
+	assert.NotNil(t, old, "old")
 	assert.Equal(t, 1, result.Len(), "len")
-	_, ok = result.Get([]byte{})
+	_, ok := result.Get([]byte{})
 	assert.False(t, ok, "should not contain deleted item")
 }
 
@@ -532,10 +565,10 @@ func Test_DeleteNode_NoChange(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93})
+	result, old := Delete(tree, []byte{0x93})
 
 	//assert
-	assert.False(t, ok, "ok")
+	assert.Nil(t, old, "old")
 	assert.Equal(t, 2, result.Len(), "len")
 	assert.Equal(t, tree, result, "no change")
 }
@@ -544,12 +577,12 @@ func Test_DeleteLeafWithChildren_ValueUnset(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94}, []byte{0x93, 0x95})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93})
+	result, old := Delete(tree, []byte{0x93})
 
 	//assert
-	assert.True(t, ok, "ok")
+	assert.NotNil(t, old, "old")
 	assert.Equal(t, 2, result.Len(), "len")
-	_, ok = result.Get([]byte{0x93})
+	_, ok := result.Get([]byte{0x93})
 	assert.False(t, ok, "should not contain deleted item")
 }
 
@@ -557,12 +590,12 @@ func Test_DeleteSingleChildLeaf_ChildMergedUp(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93})
+	result, old := Delete(tree, []byte{0x93})
 
 	//assert
-	assert.True(t, ok, "ok")
+	assert.NotNil(t, old, "old")
 	assert.Equal(t, 1, result.Len(), "len")
-	_, ok = result.Get([]byte{0x93})
+	_, ok := result.Get([]byte{0x93})
 	assert.False(t, ok, "should not contain deleted item")
 
 	fmt.Println(result.root.printDbg(""))
@@ -578,12 +611,12 @@ func Test_DeletePureLeaf_RemovedFromParent(t *testing.T) {
 	tree := makeTrieSimple([]byte{0x93}, []byte{0x93, 0x94})
 
 	//act
-	result, ok := Delete(tree, []byte{0x93, 0x94})
+	result, old := Delete(tree, []byte{0x93, 0x94})
 
 	//assert
-	assert.True(t, ok, "ok")
+	assert.NotNil(t, old, "old")
 	assert.Equal(t, 1, result.Len(), "len")
-	_, ok = result.Get([]byte{0x93, 0x94})
+	_, ok := result.Get([]byte{0x93, 0x94})
 	assert.False(t, ok, "should not contain deleted item")
 
 	fmt.Println(result.root.printDbg(""))

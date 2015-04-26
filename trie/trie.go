@@ -1,3 +1,6 @@
+// The Trie package contains an immutable patricia (or radix) trie implementation.  This radix trie
+// has a fixed radix of 256 to make comparisons easier (i.e. we can compare bytewise instead of bitwise).
+// It accepts byte slices as keys and `interface{}` as values.
 package trie
 
 import (
@@ -25,14 +28,13 @@ func (n *node) isLeaf() bool {
 // the result.  The old Trie object is left unchanged.
 //
 // Worst case reads/sets are O(len(key))
-// Iteration is O(1) forwards and backwards.
 type Trie struct {
 	//the root node.  This always has a keySlice of len 0.
 	root  *node
 	count uint32
 }
 
-// The nil trie.  We expose it as a var because it is immutable.  Don't change it, that's a bad idea.
+// The nil trie.
 func NilTrie() *Trie {
 	return nilTrie
 }
@@ -51,6 +53,7 @@ func Set(t *Trie, key []byte, value interface{}) (*Trie, interface{}) {
 	if value == nil {
 		panic("value cannot be nil")
 	}
+	//log.Printf("setting key [% x]", key)
 
 	if len(key) == 0 {
 		//the root node is the leaf for this key
@@ -101,7 +104,9 @@ func (t *Trie) Len() uint32 {
 	return t.count
 }
 
-func Delete(t *Trie, key []byte) (*Trie, bool) {
+// Deletes an item out of the trie.  Returns a new trie with the item removed, and the
+// value of the previous item.
+func Delete(t *Trie, key []byte) (*Trie, interface{}) {
 	if len(key) == 0 {
 		//the root node is the leaf for this key
 		if t.root.isLeaf() {
@@ -112,38 +117,33 @@ func Delete(t *Trie, key []byte) (*Trie, bool) {
 					children: copyMap(t.root.children, len(t.root.children)),
 				},
 				count: t.count - 1,
-			}, true
+			}, t.root.value
 		}
-		return t, false
+		return t, nil
 	}
-	newRoot, ok := deleteNode(t.root, key)
+	newRoot, val := deleteNode(t.root, key)
 
-	if ok {
+	if newRoot != t.root {
 		return &Trie{
 			root:  newRoot,
 			count: t.count - 1,
-		}, true
+		}, val
 	}
-	return t, false
+	return t, nil
 }
 
 /// --- Set functions --- //
 func setNode(t *node, key []byte, value interface{}) (*node, interface{}) {
 
-	//debugging
-	if len(key) <= len(t.keySlice) {
-		panic(fmt.Sprintf("key %v smaller than or equal to node slice %v", key, t.keySlice))
-	}
-	if !startsWith(key, t.keySlice) {
-		panic(fmt.Sprintf("key %v doesn't start with node slice %v", key, t.keySlice))
-	}
-
 	childKey := key[len(t.keySlice)] //childKey is the next byte in the array
 
+	//log.Printf("looking in node [% x], childKey %x", t.keySlice, childKey)
+
 	child, ok := t.children[childKey]
-	var childMap map[byte]*node
+	childMap := copyMap(t.children, len(t.children))
 	var old interface{} = nil
 	if !ok {
+		//log.Printf("did not find child, making new one")
 		//make a new node for that key as the child
 		childMap = copyMap(t.children, len(t.children)+1)
 		n := &node{
@@ -153,64 +153,61 @@ func setNode(t *node, key []byte, value interface{}) (*node, interface{}) {
 		}
 		childMap[childKey] = n
 	} else {
-		if bytes.Equal(child.keySlice[len(t.keySlice):], key[len(t.keySlice):]) {
-			//set that node
-			childMap = copyMap(t.children, len(t.children))
-			n := &node{
-				value:    value,
-				keySlice: key,
-				children: copyMap(child.children, len(child.children)),
-			}
-			childMap[childKey] = n
-			old = child.value
+		idx := firstDiffIndex(child.keySlice[len(t.keySlice):], key[len(t.keySlice):]) + len(t.keySlice)
 
-		} else if child.isLeaf() {
-			//need to split the leaf into a node
-			childMap = copyMap(t.children, len(t.children))
-			idx := firstDiffIndex(child.keySlice, key)
-			newChild := &node{
-				keySlice: key[:idx],
-			}
-
-			if idx == len(key) {
-				//this child should become the leaf containing the new key
-				newChild.value = value
-				newChild.children = newMap(1)
-
-				//and its child should be the old leaf
-				newChild.children[child.keySlice[idx]] = child
-			} else if idx == len(child.keySlice) {
-				//the old leaf should also become a node pointing to the new key
-				newChild.value = child.value
-				newChild.children = newMap(1)
-
+		if idx == len(key) {
+			if idx == len(child.keySlice) {
+				//log.Printf("formatting node [% x]", child.keySlice)
+				//found the node - set it
 				n := &node{
 					value:    value,
 					keySlice: key,
-					children: newMap(0),
+					children: copyMap(child.children, len(child.children)),
 				}
-				newChild.children[key[idx]] = n
+				childMap[childKey] = n
+				old = child.value
 			} else {
-				//there needs to be a brand new node pointing to both the old and new leafs
-				newChild.children = newMap(2)
-
-				newChild.children[child.keySlice[idx]] = child
+				//log.Printf("adding leaf above child [% x]", child.keySlice)
+				//need a new leaf with the child as its child
 				n := &node{
 					value:    value,
 					keySlice: key,
-					children: newMap(0),
+					children: newMap(1),
 				}
-				newChild.children[key[idx]] = n
+				n.children[child.keySlice[idx]] = child
+				childMap[childKey] = n
+			}
+		} else if idx == len(child.keySlice) {
+			//the new leaf goes below the child - recurse into it
+			//log.Printf("recursing into child [% x]", child.keySlice)
+			//debugging
+			if len(key) <= len(child.keySlice) {
+				fmt.Println(t.printDbg(""))
+				panic(fmt.Sprintf("key [% x] smaller than or equal to node slice [% x]", key, child.keySlice))
+			}
+			if !startsWith(key, child.keySlice) {
+				panic(fmt.Sprintf("key [% x] doesn't start with node slice [% x]", key, child.keySlice))
 			}
 
-			childMap[childKey] = newChild
-		} else {
 			//the child is a node with multiple children itself - recurse into it
 			var n *node
 			n, old = setNode(child, key, value)
 
-			childMap = copyMap(t.children, len(t.children))
 			childMap[childKey] = n
+		} else {
+			//need to make a new node, containing the child and the new leaf as children
+			idx := firstDiffIndex(child.keySlice, key)
+			newChild := &node{
+				keySlice: key[:idx],
+				children: newMap(2),
+			}
+			newChild.children[child.keySlice[idx]] = child
+			newChild.children[key[idx]] = &node{
+				keySlice: key,
+				value:    value,
+				children: newMap(0),
+			}
+			childMap[childKey] = newChild
 		}
 	}
 
@@ -263,27 +260,24 @@ func firstDiffIndex(left []byte, right []byte) int {
 	return len(shorter)
 }
 
-func deleteNode(t *node, key []byte) (*node, bool) {
-	//debugging
+func deleteNode(t *node, key []byte) (*node, interface{}) {
+
 	if len(key) < len(t.keySlice) {
-		return nil, false
-	}
-	if !startsWith(key, t.keySlice) {
-		panic(fmt.Sprintf("key %v doesn't start with node slice %v", key, t.keySlice))
+		return t, nil
 	}
 
 	childKey := key[len(t.keySlice)] //childKey is the next byte in the array
 	child, ok := t.children[childKey]
 	if !ok {
 		//no node with that key exists
-		return t, false
+		return t, nil
 	}
 
 	if bytes.Equal(child.keySlice[len(t.keySlice):], key[len(t.keySlice):]) {
 		//this child is the node to delete.
 		if !child.isLeaf() {
 			//there's no value here, return no change
-			return t, false
+			return t, nil
 		}
 
 		var newChild *node
@@ -302,7 +296,7 @@ func deleteNode(t *node, key []byte) (*node, bool) {
 				value:    t.value,
 				keySlice: t.keySlice,
 				children: children,
-			}, true
+			}, child.value
 		} else if length == 1 {
 			//replace it in our list with its child
 			children := make(map[byte]*node, 1)
@@ -313,7 +307,7 @@ func deleteNode(t *node, key []byte) (*node, bool) {
 				value:    t.value,
 				keySlice: t.keySlice,
 				children: children,
-			}, true
+			}, child.value
 		} else {
 			//delete it from our list
 			children := newMap(len(t.children) - 1)
@@ -327,13 +321,13 @@ func deleteNode(t *node, key []byte) (*node, bool) {
 				value:    t.value,
 				keySlice: t.keySlice,
 				children: children,
-			}, true
+			}, child.value
 		}
 	} else {
-		newChild, didDelete := deleteNode(child, key)
-		if !didDelete {
+		newChild, old := deleteNode(child, key)
+		if newChild == child {
 			//didn't find it
-			return t, false
+			return t, nil
 		}
 		//replace the child in our node's children
 		children := copyMap(t.children, len(t.children))
@@ -342,18 +336,15 @@ func deleteNode(t *node, key []byte) (*node, bool) {
 			value:    nil,
 			keySlice: make([]byte, 0),
 			children: children,
-		}, true
+		}, old
 	}
 }
 
 /// --- Get functions ---//
 func (t *node) getNode(key []byte) *node {
-	//debugging
+
 	if len(key) < len(t.keySlice) {
 		return nil
-	}
-	if !startsWith(key, t.keySlice) {
-		panic(fmt.Sprintf("key %v doesn't start with node slice %v", key, t.keySlice))
 	}
 
 	childKey := key[len(t.keySlice)] //childKey is the next byte in the array
