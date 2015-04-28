@@ -105,6 +105,262 @@ func TestSet_Insert_ThirdNodeAfterNode(t *testing.T) {
 
 }
 
+func TestSet_OverwriteRoot_ReturnsOriginal(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, old := instance.Set([]byte{0x01, 0x02, 0x03}, 124)
+
+	//assert
+	assert.Equal(t, 123, old.(int), "old")
+	assert.NotEqual(t, instance, result, "should return new tree")
+	assert.Equal(t, 124, result.root.value.(int))
+}
+
+func TestSet_OverwriteDeep_ReturnsOriginal(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x01, 0x04}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02, 0x02}, 123)
+
+	//act
+	result, old := instance.Set([]byte{0x01, 0x02, 0x03}, 124)
+
+	//assert
+	assert.Equal(t, 123, old.(int), "old")
+	assert.NotEqual(t, instance, result, "should return new tree")
+	assert.Equal(t, 124, result.root.children[1].children[1].value.(int))
+}
+
+func TestSet_Prefix_CreatesSpecialCaseNode(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, old := instance.Set([]byte{0x01, 0x02}, 12)
+
+	//assert
+	assert.Nil(t, old, "old")
+	assert.NotEqual(t, instance, result, "should return new tree")
+	assert.Equal(t, 12, result.root.children[0].value.(int))
+	assert.Equal(t, 123, result.root.children[1].value.(int))
+}
+
+func TestSet_Suffix_CreatesSpecialCaseNode(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, old := instance.Set([]byte{0x01, 0x02, 0x03, 0x04}, 1234)
+
+	//assert
+	assert.Nil(t, old, "old")
+	assert.NotEqual(t, instance, result, "should return new tree")
+	assert.Equal(t, 123, result.root.children[0].value.(int))
+	assert.Equal(t, 1234, result.root.children[1].value.(int))
+}
+
+func TestGet_NilTrie_ReturnsNothing(t *testing.T) {
+
+	instance := NilTrie()
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.False(t, ok)
+	assert.Nil(t, result)
+}
+
+func TestGet_SingleNode_Gets(t *testing.T) {
+
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.True(t, ok)
+	assert.Equal(t, 123, result)
+}
+
+func TestGet_SingleNode_Misses(t *testing.T) {
+
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x04}, 124)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.False(t, ok)
+	assert.Nil(t, result)
+}
+
+func TestGet_Deep_Gets(t *testing.T) {
+
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x01, 0x04}, 114)
+	instance, _ = instance.Set([]byte{0x01, 0x02, 0x02}, 122)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02, 0x02})
+
+	//assert
+	assert.True(t, ok)
+	assert.Equal(t, 122, result)
+}
+
+func TestGet_Deep_Misses(t *testing.T) {
+
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x01, 0x04}, 114)
+	instance, _ = instance.Set([]byte{0x01, 0x02, 0x02}, 122)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x01, 0x02})
+
+	//assert
+	assert.False(t, ok)
+	assert.Nil(t, result)
+}
+
+func TestGet_Prefix_Gets(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02}, 12)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02})
+
+	//assert
+	assert.True(t, ok)
+	assert.Equal(t, 12, result.(int))
+}
+
+func TestGet_Suffix_Gets(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02}, 12)
+
+	//act
+	result, ok := instance.Get([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.True(t, ok)
+	assert.Equal(t, 123, result.(int))
+}
+
+func TestDelete_NilTrie_Fails(t *testing.T) {
+	instance := NilTrie()
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02})
+
+	//assert
+	assert.Equal(t, result, instance, "should return same tree")
+	assert.Nil(t, was, "should have deleted nothing")
+}
+
+func TestDelete_Root_Success(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.NotEqual(t, result, instance, "should make new tree")
+	assert.Equal(t, 123, was.(int), "should return old value")
+
+	_, ok := result.Get([]byte{0x01, 0x02, 0x03})
+	assert.False(t, ok, "tree should no longer contain value")
+	_, ok = instance.Get([]byte{0x01, 0x02, 0x03})
+	assert.True(t, ok, "expect immutability")
+}
+
+func TestDelete_SingleNode_Fails(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02, 0x04})
+
+	//assert
+	assert.Equal(t, result, instance, "should return same tree")
+	assert.Nil(t, was, "should return no value")
+
+	_, ok := instance.Get([]byte{0x01, 0x02, 0x03})
+	assert.True(t, ok, "item should remain")
+}
+
+func TestDelete_Deep_Success(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02, 0x04}, 124)
+	instance, _ = instance.Set([]byte{0x01, 0x03, 0x03}, 133)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02, 0x04})
+
+	//assert
+	assert.NotEqual(t, result, instance, "should make new tree")
+	assert.Equal(t, 124, was.(int), "should return old value")
+
+	_, ok := result.Get([]byte{0x01, 0x02, 0x04})
+	assert.False(t, ok, "tree should no longer contain value")
+	_, ok = instance.Get([]byte{0x01, 0x02, 0x04})
+	assert.True(t, ok, "expect immutability")
+
+	//node structure
+	assert.Equal(t, 123, result.root.children[0].value.(int), "123")
+	assert.Equal(t, 133, result.root.children[1].value.(int), "133")
+}
+
+func TestDelete_Deep_Failure(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02, 0x04}, 124)
+	instance, _ = instance.Set([]byte{0x01, 0x03, 0x03}, 133)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02, 0x01})
+
+	//assert
+	assert.Equal(t, result, instance, "should return same tree")
+	assert.Nil(t, was, "should return no value")
+}
+
+func TestDelete_Prefix_Success(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02}, 12)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02})
+
+	//assert
+	assert.NotEqual(t, result, instance, "should make new tree")
+	assert.Equal(t, 12, was.(int), "should return old value")
+
+	_, ok := result.Get([]byte{0x01, 0x02})
+	assert.False(t, ok, "tree should no longer contain value")
+	_, ok = instance.Get([]byte{0x01, 0x02})
+	assert.True(t, ok, "expect immutability")
+
+	//node structure
+	assert.Equal(t, 123, result.root.value.(int), "123")
+}
+
+func TestDelete_Suffix_Success(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+	instance, _ = instance.Set([]byte{0x01, 0x02}, 12)
+
+	//act
+	result, was := instance.Delete([]byte{0x01, 0x02, 0x03})
+
+	//assert
+	assert.NotEqual(t, result, instance, "should make new tree")
+	assert.Equal(t, 123, was.(int), "should return old value")
+
+	_, ok := result.Get([]byte{0x01, 0x02, 0x03})
+	assert.False(t, ok, "tree should no longer contain value")
+	_, ok = instance.Get([]byte{0x01, 0x02, 0x03})
+	assert.True(t, ok, "expect immutability")
+
+	//node structure
+	assert.Equal(t, 12, result.root.value.(int), "123")
+}
+
 //-- Internal functions --//
 
 func TestFindCritbit_LowestBit(t *testing.T) {

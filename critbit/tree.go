@@ -36,17 +36,18 @@ func NilTrie() *Trie {
 
 //-- read operations --//
 
-// Tests whether the trie contains the given key.
-func (t *Trie) ContainsKey(key []byte) bool {
+// Gets an item out of the tree by its key.  Returns the item and a boolean which is
+// true if the item existed.
+func (t *Trie) Get(key []byte) (interface{}, bool) {
 	if t.root == nil {
-		return false
+		return nil, false
 	}
 
 	n := t.root.findBestLeaf(key)
 	if bytes.Equal(key, n.key) {
-		return true
+		return n.value, true
 	}
-	return false
+	return nil, false
 }
 
 // Gets the number of items in the tree.
@@ -88,6 +89,22 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	}, nil
 }
 
+func (t *Trie) Delete(key []byte) (*Trie, interface{}) {
+	if t.root == nil {
+		return t, nil
+	}
+
+	n := t.root.findBestLeaf(key)
+	if bytes.Equal(key, n.key) {
+		return &Trie{
+			root:  t.root.deleteLeaf(key),
+			count: t.count - 1,
+		}, n.value
+	}
+
+	return t, nil
+}
+
 //-- internal functions --//
 
 func (n *node) findBestLeaf(key []byte) *node {
@@ -121,9 +138,6 @@ func (n *node) setLeaf(key []byte, value interface{}) *node {
 }
 
 func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit uint8) *node {
-	if n == nil {
-		panic("nil node")
-	}
 
 	if n.key != nil ||
 		n.critbyte > critbyte || (n.critbyte == critbyte && n.critbit < critbit) {
@@ -151,6 +165,31 @@ func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit u
 	ret.children[dir] = n.children[dir].insertLeaf(key, value, critbyte, critbit)
 	ret.children[1-dir] = n.children[1-dir]
 	return ret
+}
+
+func (n *node) deleteLeaf(key []byte) *node {
+
+	if n.key != nil {
+		//this is the expected leaf delete it by returning nil
+		return nil
+	}
+
+	dir := findDirection(key, n.critbyte, n.critbit)
+	result := n.children[dir].deleteLeaf(key)
+	if result == nil {
+		//the child was deleted - this node is no longer necessary
+		return n.children[1-dir]
+	}
+
+	//update the child in this node
+	ret := &node{
+		critbyte: n.critbyte,
+		critbit:  n.critbit,
+	}
+	ret.children[dir] = result
+	ret.children[1-dir] = n.children[1-dir]
+	return ret
+
 }
 
 func findDirection(key []byte, critbyte int, critbit uint8) int {
@@ -205,11 +244,4 @@ func findCritbit(u []byte, p []byte) (int, uint8) {
 	//critbits (lowest to highest): fe, fd, fb, f7, ef, df, bf, 7f
 
 	return newbyte, newcritbit
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
