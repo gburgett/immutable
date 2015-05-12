@@ -7,6 +7,11 @@ be reversed once.
 The copy on write queue allows iterating over a snapshot of the queue, and even resuming iteration inside a future snapshot of the same queue.  This means you can keep
 your iterator around while you pop items off the queue, and push new items onto the queue, then continue iterating from where you left off.
 
+Resuming the iteration is accomplished in part by assigning every pushed item a uint64 node ID.  This means that the maximum number of items
+that can ever be pushed through the queue is 2^64 - 1, after which all queue operations except Pop and Peek are undefined, and further pushes may panic.  I
+find this to be a reasonable limitation, since at a rate of one item per 200 ns (slightly faster than my best benchmark) this would require
+almost 117 thousand years to exhaust.
+
 Examples:
 
 creating a queue and pushing some items -
@@ -64,25 +69,22 @@ complex iteration -
 
 
 Some benchmarks on my Macbook Pro 2.5GHz Intel Core i7, 16GB 1600MHz DDR3
-	BenchmarkPush_EmptyQueue				10000000	       225 ns/op
-	BenchmarkPush_SingleItem				10000000	       229 ns/op
-	BenchmarkPush_BalancedQueue				10000000	       228 ns/op
-
-	BenchmarkPop_EmptyQueue			  	  1000000000	         2.58 ns/op
-	BenchmarkPop_SingleItem			    	20000000	       100 ns/op
-	BenchmarkPop_MustRebuild10Items	 	 	 1000000	      1081 ns/op
-	BenchmarkPop_MustRebuild1kItems	   	   	   20000	     88423 ns/op
-	BenchmarkPop_MustRebuild100kItems	    	 200	   8537657 ns/op
-
-	BenchmarkPeekNext_BestCase		   	   100000000	        11.8 ns/op
-	BenchmarkPeekNext_MustRebuild10Items	 1000000	      1491 ns/op
-	BenchmarkPeekNext_MustRebuild1kItems	   20000	     93085 ns/op
-	BenchmarkPeekNext_MustRebuild100kItems	     200	   8485226 ns/op
-
-	BenchmarkIterateWholeQueue_10Items	 	 1000000	      1552 ns/op		155.2 ns/peek amoritized
-	BenchmarkIterateWholeQueue_1kItems	   	   10000	    110540 ns/op		111   ns/peek amoritized
-	BenchmarkIterateWholeQueue_100kItems	     100	  10373414 ns/op		104   ns/peek amoritized
-	ok  	github.com/gburgett/immutable/queue	30.840s
+	BenchmarkPush_EmptyQueue				10000000	       227 ns/op
+	BenchmarkPush_SingleItem				10000000	       230 ns/op
+	BenchmarkPush_BalancedQueue				10000000	       230 ns/op
+	BenchmarkPop_EmptyQueue				  1000000000	         2.50 ns/op
+	BenchmarkPop_SingleItem					20000000	       100 ns/op
+	BenchmarkPop_MustRebuild10Items	 		 1000000	      1082 ns/op
+	BenchmarkPop_MustRebuild1kItems	   		   20000	     85024 ns/op
+	BenchmarkPop_MustRebuild100kItems	   	  	 200	   8590896 ns/op
+	BenchmarkPeekNext_BestCase			   100000000	        11.5 ns/op
+	BenchmarkPeekNext_MustRebuild10Items	 1000000	      1500 ns/op
+	BenchmarkPeekNext_MustRebuild1kItems	   20000	     94198 ns/op
+	BenchmarkPeekNext_MustRebuild100kItems	     200	   8570247 ns/op
+	BenchmarkIterateWholeQueue_10Items	 	 1000000	      1552 ns/op
+	BenchmarkIterateWholeQueue_1kItems	   	   10000	    109504 ns/op
+	BenchmarkIterateWholeQueue_100kItems	     100	  10515632 ns/op
+	ok  	github.com/gburgett/immutable/queue	30.762s
 
 Some insights:
 	* performance really suffers when the queue must be rebuilt.  Don't throw this effort away.  Any operation which has the potential
