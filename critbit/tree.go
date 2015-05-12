@@ -24,10 +24,7 @@ type node struct {
 	value interface{}
 }
 
-var nilTrie *Trie = &Trie{
-	root:  nil,
-	count: 0,
-}
+var nilTrie *Trie = &Trie{}
 
 // Gets the singleton nil trie.  It is a singleton because it is immutable.
 func NilTrie() *Trie {

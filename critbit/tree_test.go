@@ -157,6 +157,23 @@ func TestSet_Suffix_CreatesSpecialCaseNode(t *testing.T) {
 	assert.Equal(t, 1234, result.root.children[1].value.(int))
 }
 
+func TestSet_NilValue_Panics(t *testing.T) {
+	instance := NilTrie()
+
+	defer func() {
+		err := recover()
+		if err == nil {
+			assert.Fail(t, "should have panicked")
+		}
+	}()
+
+	//act
+	_, _ = instance.Set([]byte{0x01}, nil)
+
+	//assert
+	assert.Fail(t, "should have panicked")
+}
+
 func TestGet_NilTrie_ReturnsNothing(t *testing.T) {
 
 	instance := NilTrie()
