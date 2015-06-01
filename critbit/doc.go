@@ -98,5 +98,4 @@ Some benchmarks on my Macbook Pro 2.5GHz Intel Core i7, 16GB 1600MHz DDR3
 	BenchmarkVisitAscendFromHalfway_1kbyte_10kItems	   		10000	    152815 ns/o
 
 */
-
 package critbit

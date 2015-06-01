@@ -58,6 +58,22 @@ func (t *Trie) Len() uint32 {
 	return t.root.count
 }
 
+/*
+VisitAscend applies the visitor function to all key-value pairs in the trie.
+The optional @from parameter specifies an inclusive starting key, and the visitor's
+boolean return value indicates whether to continue.
+This can be used to perform a prefix search on keys, ex:
+	//get every word in our dictionary trie that starts with "b"
+	words := make([]string, 0, 8)
+	myDictionary.VisitAscend([]byte("b"), func(key []byte, val interface{} bool){
+		if strings.HasPrefix(string(key), "c") {
+		return false
+		}
+		words = append(words, string(key))
+		return true
+	})
+	words == []string{"b", "baaa", "bag", "barn", "beetlejuice", "boo", "booger", "boogie"}
+*/
 func (t *Trie) VisitAscend(from []byte, visitor func([]byte, interface{}) bool) {
 	t.root.visitAscend(from, visitor, from != nil)
 }
@@ -122,6 +138,7 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	}, nil
 }
 
+// Deletes the key-value pair for the given key out of the trie.
 func (t *Trie) Delete(key []byte) (*Trie, interface{}) {
 	if t.root == nil {
 		return t, nil
