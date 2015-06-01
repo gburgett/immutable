@@ -189,7 +189,6 @@ func (n *node) setLeaf(key []byte, value interface{}) *node {
 }
 
 func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit uint8) *node {
-
 	if n.key != nil ||
 		n.critbyte > critbyte || (n.critbyte == critbyte && n.critbit > critbit) {
 		//this is the leaf we calculated the critbit from OR
@@ -250,13 +249,16 @@ func (n *node) deleteLeaf(key []byte) *node {
 func findDirection(key []byte, critbyte int, critbit uint8) int {
 	if critbit == 255 {
 		//special case - length comparison
-		if critbyte == len(key) {
+		if critbyte + 1 == len(key) {
 			return 0
 		}
 		return 1
 	}
 	//identify correct child
-	c := key[critbyte]
+	var c byte
+	if critbyte < len(key) {
+		c = key[critbyte]
+	} //else we pretend this key has an infinite trail of zeros
 	r := (1 + (critbit | c)) >> 7
 	return 1 - int(r)
 }
@@ -272,7 +274,9 @@ func findCritbit(u []byte, p []byte) (int, uint8) {
 	for newbyte = 0; newbyte < len(u); newbyte++ {
 
 		if newbyte >= len(p) {
-			return len(p), 255 //special case - u is longer
+			//special case - u is longer.  critbit, critbyte should be > all pairs indexing the last byte in p, but
+			// < all pairs indexing the next byte in u.  We'll detect this in findDirection
+			return len(p) - 1, 255
 		}
 		if p[newbyte] != u[newbyte] {
 			newcritbit = p[newbyte] ^ u[newbyte]
@@ -282,7 +286,7 @@ func findCritbit(u []byte, p []byte) (int, uint8) {
 	}
 
 	if !found {
-		return len(u), 255 //special case - p is longer
+		return len(u) - 1, 255 //special case - p is longer.  See above.
 	}
 
 	//find the critical bit

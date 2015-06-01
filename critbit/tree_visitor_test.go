@@ -144,6 +144,22 @@ func TestVisitAscend_SuffixSpecialCaseNode(t *testing.T) {
 	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, keys[1])
 }
 
+
+func TestVisitAscend_LengthLessThanCritbit(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte("ffffff"), "f")
+	instance, _ = instance.Set([]byte("fffffg"), "g")
+	instance, _ = instance.Set([]byte("aaa"), "aaa")
+
+	//act
+	keys := visitToSlice(instance, nil)
+
+	//assert
+	require.Equal(t, 3, len(keys), "len")
+	assert.Equal(t, "aaa", string(keys[0]))
+	assert.Equal(t, "ffffff", string(keys[1]))
+	assert.Equal(t, "fffffg", string(keys[2]))
+}
+
 func TestVisitAscend_StopBeforeEnd(t *testing.T) {
 	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03, 0x04}, 1234)
 	instance, _ = instance.Set([]byte{0x01, 0x02, 0x03, 0x05}, 1235)

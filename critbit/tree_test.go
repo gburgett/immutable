@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"math/rand"
 )
 
 func TestSet_Insert_Root(t *testing.T) {
@@ -105,6 +107,19 @@ func TestSet_Insert_ThirdNodeAfterNode(t *testing.T) {
 
 }
 
+func TestSet_Insert_BestLeafCritbitAfterSpecialCaseNode(t *testing.T){
+	instance, _ := NilTrie().Set([]byte{0x65, 0x7b, 0x1b}, 1)
+	instance, _ = instance.Set([]byte{0x65}, 2)
+	instance, _ = instance.Set([]byte{0x65, 0x03, 0xec, 0x04}, 3)
+
+	//act
+	got, ok := instance.Get([]byte{0x65})
+
+	//assert
+	require.True(t, ok)
+	assert.Equal(t, 2, got.(int))
+}
+
 func TestSet_OverwriteRoot_ReturnsOriginal(t *testing.T) {
 	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
 
@@ -159,6 +174,22 @@ func TestSet_Suffix_CreatesSpecialCaseNode(t *testing.T) {
 	assert.Equal(t, 123, result.root.children[0].value.(int))
 	assert.Equal(t, 1234, result.root.children[1].value.(int))
 	assert.Equal(t, 2, result.Len(), "len")
+}
+
+func TestSet_LengthLessThanCritbit_InsertsAheadOfNode(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte("ffffff"), "f")
+	instance, _ = instance.Set([]byte("fffffg"), "g")
+
+	//act
+	fmt.Println("inserting...\n")
+	instance, old := instance.Set([]byte("aaa"), "aaa")
+
+	//assert
+	assert.Nil(t, old, "nothing should be overwritten")
+	got, ok := instance.Get([]byte("aaa"))
+	require.True(t, ok)
+	assert.NotNil(t, got)
+	assert.Equal(t, "aaa", got)
 }
 
 func TestSet_NilValue_Panics(t *testing.T) {
@@ -439,7 +470,7 @@ func TestFindCritbit_PIsLonger_CritbitIs255(t *testing.T) {
 	critbyte, critbit := findCritbit(u, p)
 
 	//assert
-	assert.Equal(t, 3, critbyte, "critbyte should be length of p")
+	assert.Equal(t, 2, critbyte, "critbyte should be index of last byte in p")
 	assert.Equal(t, 0xFF, critbit, "255")
 }
 
@@ -451,7 +482,7 @@ func TestFindCritbit_UIsLonger_CritbitIs255(t *testing.T) {
 	critbyte, critbit := findCritbit(u, p)
 
 	//assert
-	assert.Equal(t, 4, critbyte, "critbyte should be length of u")
+	assert.Equal(t, 3, critbyte, "critbyte should be index of last byte in u")
 	assert.Equal(t, 0xFF, critbit, "255")
 }
 
@@ -504,4 +535,91 @@ func TestFindDirection_AllBits_ComparesCorrectBit(t *testing.T) {
 		assert.Equal(t, 0, directionP, "0x80")
 
 	}
+}
+
+func TestInsert_RandomBytes_DoesNotFail(t *testing.T){
+	var number = 1000
+	keys := make([][]byte, number)
+	for i := 0; i < number - 1; i++ {
+		keys[i] = randBytes()
+	}
+	keys[number - 1] = []byte{0x8d}
+
+	tree := NilTrie()
+
+	var current []byte
+	defer func(){
+		if err := recover(); err != nil {
+			fmt.Printf("Error with %x! %v\n%s", current, err, tree.DumpTrie())
+			panic(err)
+		}
+	}()
+	for i := 0; i < number; i++ {
+		current = keys[i]
+		tree, _ = tree.Set(current, i)
+	}
+	for i := number - 1; i >= 0; i-- {
+		current = keys[i]
+		_, ok := tree.Get(current)
+		if !ok {
+			assert.Fail(t, fmt.Sprintf("Could not get %x.  Tree: \n%s", current, tree.DumpTrie()))
+		}
+	}
+
+	snapshot := tree
+
+	seen := make(map[string]bool)
+	for i := 0; i < number; i++ {
+		current = keys[i]
+		if seen[string(current)] {
+			continue
+		}
+		seen[string(current)] = true
+		var was interface{}
+		tree, was = tree.Delete(current)
+		if was == nil {
+			assert.Fail(t, fmt.Sprintf("deleted empty value for key [%x].  Tree: \n %s", current, tree.DumpTrie()))
+		}
+	}
+	assert.Equal(t, 0, tree.Len())
+
+	expect := len(seen)
+	count := 0
+	snapshot.VisitAscend(nil, func(key []byte, val interface{}) bool {
+		count++
+		if !seen[string(key)] {
+			assert.Fail(t, fmt.Sprintf("visited key that was never seen: [%x].  Tree: \n%s", current, tree.DumpTrie()))
+		}
+		delete(seen, string(key))
+		return true
+	})
+	assert.Equal(t, expect, count)
+}
+
+func (t *Trie) DumpTrie() string{
+	if t.root == nil {
+		return "empty"
+	}
+	return t.root.DumpNode("")
+}
+
+func (n *node) DumpNode(prefix string) string {
+	head := fmt.Sprintf("[%x](%d %x)\n", n.key, n.critbyte, n.critbit)
+
+	p2 := prefix + "  "
+	if n.children[0] != nil {
+		ch0 := fmt.Sprintf("%s[0]: %s", p2, n.children[0].DumpNode(p2))
+		ch1 := fmt.Sprintf("%s[1]: %s", p2, n.children[1].DumpNode(p2))
+		return head + ch0 + ch1
+	}
+	return head
+}
+
+
+func randBytes() []byte {
+	bytes := make([]byte, rand.Intn(32))
+	for i:= 0; i < len(bytes); i++ {
+		bytes[i] = byte(rand.Intn(256))
+	}
+	return bytes
 }
