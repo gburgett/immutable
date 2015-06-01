@@ -244,3 +244,94 @@ func makeRandomKey(t *testing.B, keyLen int) []byte {
 	}
 	return b
 }
+
+func benchmarkVisitAscend(b *testing.B, numItems int, keyLen int, from []byte) {
+	tree := NilTrie()
+
+	keys := make([][]byte, numItems)
+	for i := 0; i < len(keys); i++ {
+		key := makeRandomKey(b, keyLen)
+		keys[i] = key
+		tree, _ = tree.Set(key, i)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		tree.VisitAscend(from, func(key []byte, val interface{}) bool {
+			return true
+		})
+	}
+}
+
+func BenchmarkVisitAscend_32bit_SingleItem(b *testing.B) {
+	benchmarkVisitAscend(b, 1, 32/8, nil)
+}
+
+func BenchmarkVisitAscend_32bit_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 32/8, nil)
+}
+
+func BenchmarkVisitAscend_32bit_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 32/8, nil)
+}
+
+func BenchmarkVisitAscend_64bit_SingleItem(b *testing.B) {
+	benchmarkVisitAscend(b, 1, 64/8, nil)
+}
+
+func BenchmarkVisitAscend_64bit_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 64/8, nil)
+}
+
+func BenchmarkVisitAscend_64bit_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 64/8, nil)
+}
+
+func BenchmarkVisitAscend_1kbyte_SingleItem(b *testing.B) {
+	benchmarkVisitAscend(b, 1, 128/8, nil)
+}
+
+func BenchmarkVisitAscend_1kbyte_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 128/8, nil)
+}
+
+func BenchmarkVisitAscend_1kbyte_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 1024, nil)
+}
+
+func BenchmarkVisitAscendFromHalfway_32bit_SingleItem(b *testing.B) {
+	// 0x80 is gt exactly half the address space 0x00000000... -> 0xffffffff...
+	benchmarkVisitAscend(b, 1, 32/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_32bit_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 32/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_32bit_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 32/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_64bit_SingleItem(b *testing.B) {
+	benchmarkVisitAscend(b, 1, 64/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_64bit_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 64/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_64bit_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 64/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_1kbyte_SingleItem(b *testing.B) {
+	benchmarkVisitAscend(b, 1, 128/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_1kbyte_100Items(b *testing.B) {
+	benchmarkVisitAscend(b, 100, 128/8, []byte{0x80})
+}
+
+func BenchmarkVisitAscendFromHalfway_1kbyte_10kItems(b *testing.B) {
+	benchmarkVisitAscend(b, 10*1000, 1024, []byte{0x80})
+}

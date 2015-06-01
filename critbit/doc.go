@@ -78,6 +78,25 @@ Some benchmarks on my Macbook Pro 2.5GHz Intel Core i7, 16GB 1600MHz DDR3
 	BenchmarkDelete_1kbyte_100Items	 	 5000000	       419 ns/op
 	BenchmarkDelete_1kbyte_10kItems	 	 2000000	       667 ns/op
 
+	BenchmarkVisitAscend_32bit_SingleItem				100000000	        12.4 ns/op
+	BenchmarkVisitAscend_32bit_100Items	 	  			  1000000	      1353 ns/op
+	BenchmarkVisitAscend_32bit_10kItems	    	 			 5000	    306969 ns/op
+	BenchmarkVisitAscend_64bit_SingleItem				100000000	        12.4 ns/op
+	BenchmarkVisitAscend_64bit_100Items	 	  			  1000000	      1396 ns/op
+	BenchmarkVisitAscend_64bit_10kItems	    	 			 5000	    309394 ns/op
+	BenchmarkVisitAscend_1kbyte_SingleItem				100000000	        12.3 ns/op
+	BenchmarkVisitAscend_1kbyte_100Items	  			  1000000	      1369 ns/op
+	BenchmarkVisitAscend_1kbyte_10kItems	     			 5000	    311436 ns/op
+	BenchmarkVisitAscendFromHalfway_32bit_SingleItem	100000000	        21.2 ns/op
+	BenchmarkVisitAscendFromHalfway_32bit_100Items	 	  3000000	       645 ns/op
+	BenchmarkVisitAscendFromHalfway_32bit_10kItems	   		10000	    150647 ns/op
+	BenchmarkVisitAscendFromHalfway_64bit_SingleItem	100000000	        13.5 ns/op
+	BenchmarkVisitAscendFromHalfway_64bit_100Items	 	  2000000	       755 ns/op
+	BenchmarkVisitAscendFromHalfway_64bit_10kItems	   		10000	    148501 ns/op
+	BenchmarkVisitAscendFromHalfway_1kbyte_SingleItem	100000000	        13.7 ns/op
+	BenchmarkVisitAscendFromHalfway_1kbyte_100Items	 	  2000000	       688 ns/op
+	BenchmarkVisitAscendFromHalfway_1kbyte_10kItems	   		10000	    152815 ns/o
+
 */
 
 package critbit

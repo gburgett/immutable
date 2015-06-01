@@ -1,11 +1,13 @@
 package critbit
 
-import "bytes"
+import (
+	"bytes"
+)
 
 // A copy-on-write critbit Trie.  It stores key-value pairs where the key is a byte slice.
 // The internal implementation is based on https://github.com/agl/critbit/blob/master/critbit.pdf
 type Trie struct {
-	root  *node
+	root *node
 }
 
 type node struct {
@@ -56,6 +58,38 @@ func (t *Trie) Len() uint32 {
 	return t.root.count
 }
 
+func (t *Trie) VisitAscend(from []byte, visitor func([]byte, interface{}) bool) {
+	t.root.visitAscend(from, visitor, from != nil)
+}
+
+func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, needsCompare bool) bool {
+	if n == nil {
+		return false
+	}
+	if n.key != nil {
+		//this is a leaf - is it included?
+		if !needsCompare || bytes.Compare(n.key, from) >= 0 {
+			return visitor(n.key, n.value)
+		}
+		return true //continue up
+	}
+
+	//this is a node
+	direction := 0
+	if from != nil && needsCompare {
+		direction = findDirection(from, n.critbyte, n.critbit)
+	}
+	if direction == 0 {
+		if !n.children[0].visitAscend(from, visitor, needsCompare) {
+			return false
+		}
+	}
+	if !n.children[1].visitAscend(from, visitor, false) {
+		return false
+	}
+	return true
+}
+
 //-- write operations --//
 
 // Returns a new Trie with the given key set to the given value.
@@ -77,14 +111,14 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	n := t.root.findBestLeaf(key)
 	if bytes.Equal(key, n.key) {
 		return &Trie{
-			root:  t.root.setLeaf(key, value),
+			root: t.root.setLeaf(key, value),
 		}, n.value
 	}
 
 	//insert node
 	critbyte, critbit := findCritbit(key, n.key)
 	return &Trie{
-		root:  t.root.insertLeaf(key, value, critbyte, critbit),
+		root: t.root.insertLeaf(key, value, critbyte, critbit),
 	}, nil
 }
 
@@ -96,7 +130,7 @@ func (t *Trie) Delete(key []byte) (*Trie, interface{}) {
 	n := t.root.findBestLeaf(key)
 	if bytes.Equal(key, n.key) {
 		return &Trie{
-			root:  t.root.deleteLeaf(key),
+			root: t.root.deleteLeaf(key),
 		}, n.value
 	}
 
@@ -140,14 +174,14 @@ func (n *node) setLeaf(key []byte, value interface{}) *node {
 func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit uint8) *node {
 
 	if n.key != nil ||
-		n.critbyte > critbyte || (n.critbyte == critbyte && n.critbit < critbit) {
+		n.critbyte > critbyte || (n.critbyte == critbyte && n.critbit > critbit) {
 		//this is the leaf we calculated the critbit from OR
 		//this node's critbit is bigger than the one we're trying to add, add a node before it
 		dir := findDirection(key, critbyte, critbit)
 		ret := &node{
 			critbyte: critbyte,
 			critbit:  critbit,
-			count: n.count + 1,
+			count:    n.count + 1,
 		}
 		ret.children[dir] = &node{
 			key:   key,
@@ -163,7 +197,7 @@ func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit u
 	ret := &node{
 		critbyte: n.critbyte,
 		critbit:  n.critbit,
-		count: n.count+1,
+		count:    n.count + 1,
 	}
 	ret.children[dir] = n.children[dir].insertLeaf(key, value, critbyte, critbit)
 	ret.children[1-dir] = n.children[1-dir]
@@ -188,7 +222,7 @@ func (n *node) deleteLeaf(key []byte) *node {
 	ret := &node{
 		critbyte: n.critbyte,
 		critbit:  n.critbit,
-		count: n.count-1,
+		count:    n.count - 1,
 	}
 	ret.children[dir] = result
 	ret.children[1-dir] = n.children[1-dir]
