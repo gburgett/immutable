@@ -115,6 +115,7 @@ func TestSet_OverwriteRoot_ReturnsOriginal(t *testing.T) {
 	assert.Equal(t, 123, old.(int), "old")
 	assert.NotEqual(t, instance, result, "should return new tree")
 	assert.Equal(t, 124, result.root.value.(int))
+	assert.Equal(t, 1, result.Len(), "len")
 }
 
 func TestSet_OverwriteDeep_ReturnsOriginal(t *testing.T) {
@@ -129,6 +130,7 @@ func TestSet_OverwriteDeep_ReturnsOriginal(t *testing.T) {
 	assert.Equal(t, 123, old.(int), "old")
 	assert.NotEqual(t, instance, result, "should return new tree")
 	assert.Equal(t, 124, result.root.children[1].children[1].value.(int))
+	assert.Equal(t, 3, result.Len(), "len")
 }
 
 func TestSet_Prefix_CreatesSpecialCaseNode(t *testing.T) {
@@ -142,6 +144,7 @@ func TestSet_Prefix_CreatesSpecialCaseNode(t *testing.T) {
 	assert.NotEqual(t, instance, result, "should return new tree")
 	assert.Equal(t, 12, result.root.children[0].value.(int))
 	assert.Equal(t, 123, result.root.children[1].value.(int))
+	assert.Equal(t, 2, result.Len(), "len")
 }
 
 func TestSet_Suffix_CreatesSpecialCaseNode(t *testing.T) {
@@ -155,6 +158,7 @@ func TestSet_Suffix_CreatesSpecialCaseNode(t *testing.T) {
 	assert.NotEqual(t, instance, result, "should return new tree")
 	assert.Equal(t, 123, result.root.children[0].value.(int))
 	assert.Equal(t, 1234, result.root.children[1].value.(int))
+	assert.Equal(t, 2, result.Len(), "len")
 }
 
 func TestSet_NilValue_Panics(t *testing.T) {
@@ -285,6 +289,7 @@ func TestDelete_Root_Success(t *testing.T) {
 
 	_, ok := result.Get([]byte{0x01, 0x02, 0x03})
 	assert.False(t, ok, "tree should no longer contain value")
+	assert.Equal(t, 0, result.Len(), "len")
 	_, ok = instance.Get([]byte{0x01, 0x02, 0x03})
 	assert.True(t, ok, "expect immutability")
 }
@@ -298,6 +303,7 @@ func TestDelete_SingleNode_Fails(t *testing.T) {
 	//assert
 	assert.Equal(t, result, instance, "should return same tree")
 	assert.Nil(t, was, "should return no value")
+	assert.Equal(t, 1, result.Len(), "len")
 
 	_, ok := instance.Get([]byte{0x01, 0x02, 0x03})
 	assert.True(t, ok, "item should remain")
@@ -317,6 +323,7 @@ func TestDelete_Deep_Success(t *testing.T) {
 
 	_, ok := result.Get([]byte{0x01, 0x02, 0x04})
 	assert.False(t, ok, "tree should no longer contain value")
+	assert.Equal(t, 2, result.Len(), "len")
 	_, ok = instance.Get([]byte{0x01, 0x02, 0x04})
 	assert.True(t, ok, "expect immutability")
 
@@ -351,6 +358,7 @@ func TestDelete_Prefix_Success(t *testing.T) {
 
 	_, ok := result.Get([]byte{0x01, 0x02})
 	assert.False(t, ok, "tree should no longer contain value")
+	assert.Equal(t, 1, result.Len(), "len")
 	_, ok = instance.Get([]byte{0x01, 0x02})
 	assert.True(t, ok, "expect immutability")
 
@@ -371,6 +379,7 @@ func TestDelete_Suffix_Success(t *testing.T) {
 
 	_, ok := result.Get([]byte{0x01, 0x02, 0x03})
 	assert.False(t, ok, "tree should no longer contain value")
+	assert.Equal(t, 1, result.Len(), "len")
 	_, ok = instance.Get([]byte{0x01, 0x02, 0x03})
 	assert.True(t, ok, "expect immutability")
 

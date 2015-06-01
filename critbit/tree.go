@@ -6,7 +6,6 @@ import "bytes"
 // The internal implementation is based on https://github.com/agl/critbit/blob/master/critbit.pdf
 type Trie struct {
 	root  *node
-	count uint32
 }
 
 type node struct {
@@ -17,6 +16,8 @@ type node struct {
 	critbit uint8
 
 	children [2]*node
+
+	count uint32
 
 	//the key at this leaf.  All external leafs have a non-nil key.
 	key []byte
@@ -49,7 +50,10 @@ func (t *Trie) Get(key []byte) (interface{}, bool) {
 
 // Gets the number of items in the tree.
 func (t *Trie) Len() uint32 {
-	return t.count
+	if t.root == nil {
+		return 0
+	}
+	return t.root.count
 }
 
 //-- write operations --//
@@ -65,8 +69,8 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 			root: &node{
 				key:   key,
 				value: value,
+				count: 1,
 			},
-			count: 1,
 		}, nil
 	}
 
@@ -74,7 +78,6 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	if bytes.Equal(key, n.key) {
 		return &Trie{
 			root:  t.root.setLeaf(key, value),
-			count: t.count,
 		}, n.value
 	}
 
@@ -82,7 +85,6 @@ func (t *Trie) Set(key []byte, value interface{}) (*Trie, interface{}) {
 	critbyte, critbit := findCritbit(key, n.key)
 	return &Trie{
 		root:  t.root.insertLeaf(key, value, critbyte, critbit),
-		count: t.count + 1,
 	}, nil
 }
 
@@ -95,7 +97,6 @@ func (t *Trie) Delete(key []byte) (*Trie, interface{}) {
 	if bytes.Equal(key, n.key) {
 		return &Trie{
 			root:  t.root.deleteLeaf(key),
-			count: t.count - 1,
 		}, n.value
 	}
 
@@ -120,6 +121,7 @@ func (n *node) setLeaf(key []byte, value interface{}) *node {
 		return &node{
 			key:   key,
 			value: value,
+			count: 1,
 		}
 	}
 
@@ -131,6 +133,7 @@ func (n *node) setLeaf(key []byte, value interface{}) *node {
 	}
 	ret.children[1-direction] = n.children[1-direction]
 	ret.children[direction] = n.children[direction].setLeaf(key, value)
+	ret.count = n.count
 	return ret
 }
 
@@ -144,10 +147,12 @@ func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit u
 		ret := &node{
 			critbyte: critbyte,
 			critbit:  critbit,
+			count: n.count + 1,
 		}
 		ret.children[dir] = &node{
 			key:   key,
 			value: value,
+			count: 1,
 		}
 		ret.children[1-dir] = n
 		return ret
@@ -158,6 +163,7 @@ func (n *node) insertLeaf(key []byte, value interface{}, critbyte int, critbit u
 	ret := &node{
 		critbyte: n.critbyte,
 		critbit:  n.critbit,
+		count: n.count+1,
 	}
 	ret.children[dir] = n.children[dir].insertLeaf(key, value, critbyte, critbit)
 	ret.children[1-dir] = n.children[1-dir]
@@ -182,6 +188,7 @@ func (n *node) deleteLeaf(key []byte) *node {
 	ret := &node{
 		critbyte: n.critbyte,
 		critbit:  n.critbit,
+		count: n.count-1,
 	}
 	ret.children[dir] = result
 	ret.children[1-dir] = n.children[1-dir]
