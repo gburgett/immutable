@@ -2,6 +2,7 @@ package critbit
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -193,6 +194,25 @@ func TestVisitAscend_StopBeforeEnd(t *testing.T) {
 	require.Equal(t, 2, len(vals), "len")
 	assert.Equal(t, 1234, vals[0])
 	assert.Equal(t, 1235, vals[1])
+}
+
+func TestVisitAscend_DeepNodeStillNeedsCompare(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte("1"), 1)
+	instance, _ = instance.Set([]byte("2"), 2)
+	instance, _ = instance.Set([]byte("3"), 3)
+
+	fmt.Println(instance.DumpTrie())
+
+	//act
+	vals := make([]interface{}, 0, 1)
+	instance.VisitAscend([]byte("3"), func(key []byte, val interface{}) bool {
+		vals = append(vals, val)
+		return true
+	})
+
+	//assert
+	require.Equal(t, 1, len(vals), "len")
+	assert.Equal(t, vals[0], 3)
 }
 
 func visitToSlice(t *Trie, from []byte) [][]byte {

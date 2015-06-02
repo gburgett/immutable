@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"
+	"sort"
 )
 
 func TestSet_Insert_Root(t *testing.T) {
@@ -583,17 +584,32 @@ func TestInsert_RandomBytes_DoesNotFail(t *testing.T) {
 	}
 	assert.Equal(t, 0, tree.Len())
 
-	expect := len(seen)
-	count := 0
-	snapshot.VisitAscend(nil, func(key []byte, val interface{}) bool {
-		count++
-		if !seen[string(key)] {
-			assert.Fail(t, fmt.Sprintf("visited key that was never seen: [%x].  Tree: \n%s", current, tree.DumpTrie()))
+	seenSlice := make([]string, 0, len(seen))
+	for k, v := range seen {
+		if v {
+			seenSlice = append(seenSlice, k)
 		}
-		delete(seen, string(key))
-		return true
-	})
-	assert.Equal(t, expect, count)
+	}
+	sort.Strings(seenSlice)
+
+	//start at random locations and visit 10 items in order.
+	for i := 0; i < 10; i++ {
+		start := rand.Intn(len(seenSlice) - 10)
+		count := 0
+		snapshot.VisitAscend([]byte(seenSlice[start]), func(key []byte, val interface{}) bool {
+			if count >= 10 {
+				return false
+			}
+			if !assert.Equal(t, []byte(seenSlice[start + count]), key) {
+				fmt.Println("tree: \n%s", snapshot.DumpTrie())
+			}
+			count++
+			return true
+		})
+		if !assert.Equal(t, 10, count) {
+			fmt.Println("tree: \n%s", snapshot.DumpTrie())
+		}
+	}
 }
 
 func (t *Trie) DumpTrie() string {
@@ -622,3 +638,4 @@ func randBytes() []byte {
 	}
 	return bytes
 }
+

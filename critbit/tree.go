@@ -78,17 +78,17 @@ func (t *Trie) VisitAscend(from []byte, visitor func([]byte, interface{}) bool) 
 	t.root.visitAscend(from, visitor, from != nil)
 }
 
-func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, needsCompare bool) bool {
+func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, needsCompare bool) (bool, bool) {
 	if n == nil {
-		return false
+		return false, false
 	}
 	if n.key != nil {
 		// needsCompare is a short-circuit, if we've determined we're
 		// already past the lower bound
 		if !needsCompare || bytes.Compare(n.key, from) >= 0 {
-			return visitor(n.key, n.value)
+			return visitor(n.key, n.value), false
 		}
-		return true //continue up
+		return true, needsCompare //continue up the tree, comparing until we find the first one
 	}
 
 	//this is a node
@@ -97,18 +97,19 @@ func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, 
 		// navigate down the tree to short-circuit as many as possible of the keys lt from
 		direction = findDirection(from, n.critbyte, n.critbit)
 	}
+
+	var result bool
 	if direction == 0 {
-		//we may still need to compare - can't begin short circuting.
-		if !n.children[0].visitAscend(from, visitor, needsCompare) {
-			return false
+		if result, needsCompare = n.children[0].visitAscend(from, visitor, needsCompare); !result {
+			return false, needsCompare
 		}
 	}
 	// if the direction we chose at this node was zero, then the 1 child
 	// is gt the key so we can start short-circuting the comparisons.
-	if !n.children[1].visitAscend(from, visitor, needsCompare && direction == 0) {
-		return false
+	if result, needsCompare = n.children[1].visitAscend(from, visitor, needsCompare); !result {
+		return false, needsCompare
 	}
-	return true
+	return true, needsCompare
 }
 
 //-- write operations --//
