@@ -66,8 +66,8 @@ This can be used to perform a prefix search on keys, ex:
 	//get every word in our dictionary trie that starts with "b"
 	words := make([]string, 0, 8)
 	myDictionary.VisitAscend([]byte("b"), func(key []byte, val interface{} bool){
-		if strings.HasPrefix(string(key), "c") {
-		return false
+		if !strings.HasPrefix(string(key), "b") {
+		  return false
 		}
 		words = append(words, string(key))
 		return true
@@ -83,7 +83,8 @@ func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, 
 		return false
 	}
 	if n.key != nil {
-		//this is a leaf - is it included?
+		// needsCompare is a short-circuit, if we've determined we're
+		// already past the lower bound
 		if !needsCompare || bytes.Compare(n.key, from) >= 0 {
 			return visitor(n.key, n.value)
 		}
@@ -92,15 +93,19 @@ func (n *node) visitAscend(from []byte, visitor func([]byte, interface{}) bool, 
 
 	//this is a node
 	direction := 0
-	if from != nil && needsCompare {
+	if needsCompare {
+		// navigate down the tree to short-circuit as many as possible of the keys lt from
 		direction = findDirection(from, n.critbyte, n.critbit)
 	}
 	if direction == 0 {
+		//we may still need to compare - can't begin short circuting.
 		if !n.children[0].visitAscend(from, visitor, needsCompare) {
 			return false
 		}
 	}
-	if !n.children[1].visitAscend(from, visitor, false) {
+	// if the direction we chose at this node was zero, then the 1 child
+	// is gt the key so we can start short-circuting the comparisons.
+	if !n.children[1].visitAscend(from, visitor, needsCompare && direction == 0) {
 		return false
 	}
 	return true
@@ -249,7 +254,7 @@ func (n *node) deleteLeaf(key []byte) *node {
 func findDirection(key []byte, critbyte int, critbit uint8) int {
 	if critbit == 255 {
 		//special case - length comparison
-		if critbyte + 1 == len(key) {
+		if critbyte+1 == len(key) {
 			return 0
 		}
 		return 1

@@ -107,7 +107,7 @@ func TestSet_Insert_ThirdNodeAfterNode(t *testing.T) {
 
 }
 
-func TestSet_Insert_BestLeafCritbitAfterSpecialCaseNode(t *testing.T){
+func TestSet_Insert_BestLeafCritbitAfterSpecialCaseNode(t *testing.T) {
 	instance, _ := NilTrie().Set([]byte{0x65, 0x7b, 0x1b}, 1)
 	instance, _ = instance.Set([]byte{0x65}, 2)
 	instance, _ = instance.Set([]byte{0x65, 0x03, 0xec, 0x04}, 3)
@@ -537,18 +537,18 @@ func TestFindDirection_AllBits_ComparesCorrectBit(t *testing.T) {
 	}
 }
 
-func TestInsert_RandomBytes_DoesNotFail(t *testing.T){
+func TestInsert_RandomBytes_DoesNotFail(t *testing.T) {
 	var number = 1000
 	keys := make([][]byte, number)
-	for i := 0; i < number - 1; i++ {
+	for i := 0; i < number-1; i++ {
 		keys[i] = randBytes()
 	}
-	keys[number - 1] = []byte{0x8d}
+	keys[number-1] = []byte{0x8d}
 
 	tree := NilTrie()
 
 	var current []byte
-	defer func(){
+	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("Error with %x! %v\n%s", current, err, tree.DumpTrie())
 			panic(err)
@@ -596,7 +596,7 @@ func TestInsert_RandomBytes_DoesNotFail(t *testing.T){
 	assert.Equal(t, expect, count)
 }
 
-func (t *Trie) DumpTrie() string{
+func (t *Trie) DumpTrie() string {
 	if t.root == nil {
 		return "empty"
 	}
@@ -615,10 +615,9 @@ func (n *node) DumpNode(prefix string) string {
 	return head
 }
 
-
 func randBytes() []byte {
 	bytes := make([]byte, rand.Intn(32))
-	for i:= 0; i < len(bytes); i++ {
+	for i := 0; i < len(bytes); i++ {
 		bytes[i] = byte(rand.Intn(256))
 	}
 	return bytes

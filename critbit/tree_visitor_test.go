@@ -38,6 +38,16 @@ func TestVisitAscend_Root_SkipsLessThanFrom(t *testing.T) {
 	require.Equal(t, 0, len(keys), "len")
 }
 
+func TestVisitAscend_Root_DoesntSkipGreaterThanFrom(t *testing.T) {
+	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
+
+	//act
+	keys := visitToSlice(instance, []byte{0x01})
+
+	//assert
+	require.Equal(t, 1, len(keys), "len")
+}
+
 func TestVisitAscend_SecondNodeAtZero(t *testing.T) {
 	instance, _ := NilTrie().Set([]byte{0x01, 0x02, 0x03}, 123)
 	instance, _ = instance.Set([]byte{0x01, 0x02, 0x02}, 122)
@@ -143,7 +153,6 @@ func TestVisitAscend_SuffixSpecialCaseNode(t *testing.T) {
 	assert.Equal(t, []byte{0x01, 0x02, 0x03}, keys[0])
 	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, keys[1])
 }
-
 
 func TestVisitAscend_LengthLessThanCritbit(t *testing.T) {
 	instance, _ := NilTrie().Set([]byte("ffffff"), "f")
