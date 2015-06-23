@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"math/rand"
 	"sort"
+	"unicode/utf8"
 )
 
 func TestSet_Insert_Root(t *testing.T) {
@@ -291,10 +292,11 @@ func TestGet_Suffix_Gets(t *testing.T) {
 	instance, _ = instance.Set([]byte{0x01, 0x02}, 12)
 
 	//act
+	println(instance.DumpTrie())
 	result, ok := instance.Get([]byte{0x01, 0x02, 0x03})
 
 	//assert
-	assert.True(t, ok)
+	require.True(t, ok)
 	assert.Equal(t, 123, result.(int))
 }
 
@@ -600,7 +602,7 @@ func TestInsert_RandomBytes_DoesNotFail(t *testing.T) {
 			if count >= 10 {
 				return false
 			}
-			if !assert.Equal(t, []byte(seenSlice[start + count]), key) {
+			if !assert.Equal(t, []byte(seenSlice[start+count]), key) {
 				fmt.Println("tree: \n%s", snapshot.DumpTrie())
 			}
 			count++
@@ -620,7 +622,13 @@ func (t *Trie) DumpTrie() string {
 }
 
 func (n *node) DumpNode(prefix string) string {
-	head := fmt.Sprintf("[%x](%d %x)\n", n.key, n.critbyte, n.critbit)
+	keyStr := ""
+	if utf8.Valid(n.key) {
+		keyStr = string(n.key)
+	} else {
+		keyStr = fmt.Sprintf("[%x]", n.key)
+	}
+	head := fmt.Sprintf("%s (%d %x)\n", keyStr, n.critbyte, n.critbit)
 
 	p2 := prefix + "  "
 	if n.children[0] != nil {
@@ -638,4 +646,3 @@ func randBytes() []byte {
 	}
 	return bytes
 }
-

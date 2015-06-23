@@ -215,6 +215,25 @@ func TestVisitAscend_DeepNodeStillNeedsCompare(t *testing.T) {
 	assert.Equal(t, vals[0], 3)
 }
 
+func TestVisitAscend_FromPrefixOfPrefix(t *testing.T){
+	instance, _ := NilTrie().Set([]byte("abcd/abcd1"), "2")
+	instance, _ = instance.Set([]byte("abcd/abcd2"), "3")
+	instance, _ = instance.Set([]byte("abcdefgh/abcd3"), "4")
+	instance, _ = instance.Set([]byte("abc/ghi"), "-")
+	instance, _ = instance.Set([]byte("abcd/a"), "1")
+
+	//act
+	fmt.Println(instance.DumpTrie())
+	keys := visitToSlice(instance, []byte("abcd/"))
+
+	//assert
+	assert.Equal(t, "abcd/a", string(keys[0]))
+	assert.Equal(t, "abcd/abcd1", string(keys[1]))
+	assert.Equal(t, "abcd/abcd2", string(keys[2]))
+	require.Equal(t, 4, len(keys), "len")
+	assert.Equal(t, "abcdefgh/abcd3", string(keys[3]))
+}
+
 func visitToSlice(t *Trie, from []byte) [][]byte {
 	ret := make([][]byte, 0, t.Len())
 	t.VisitAscend(from, func(key []byte, val interface{}) bool {

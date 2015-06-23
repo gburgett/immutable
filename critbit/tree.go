@@ -254,8 +254,8 @@ func (n *node) deleteLeaf(key []byte) *node {
 
 func findDirection(key []byte, critbyte int, critbit uint8) int {
 	if critbit == 255 {
-		//special case - length comparison
-		if critbyte+1 == len(key) {
+		//special case - length comparison.  Longer keys are 1, shorter are 0.
+		if critbyte+1 >= len(key) {
 			return 0
 		}
 		return 1
@@ -264,7 +264,7 @@ func findDirection(key []byte, critbyte int, critbit uint8) int {
 	var c byte
 	if critbyte < len(key) {
 		c = key[critbyte]
-	} //else we pretend this key has an infinite trail of zeros
+	} //else we pretend this key has an infinite trail of zeros (c == 0)
 	r := (1 + (critbit | c)) >> 7
 	return 1 - int(r)
 }
